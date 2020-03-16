@@ -1,0 +1,29 @@
+<!-- 
+Thanks for reporting an issue with `clientgofix`.
+Please provide all of the following info to help reproduce/resolve issues quickly.
+-->
+
+<!-- Run `git show` in the clone of `clientgofix` you built from to find the version -->
+clientgofix version: ...
+
+clientgofix invocation: ...
+
+clientgofix output:
+```
+... provide clientgofix output ...
+```
+
+<!-- Run the following commands in the same location and shell environment you ran `clientgofix` -->
+go environment:
+```
+go env
+go list .
+git show
+git status
+```
+
+<!--
+If a file was modified in an unexpected way, in addition to providing the above info:
+* link to or provide the file content before and after running `clientgofix`
+* describe the modification you expected
+-->
