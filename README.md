@@ -5,6 +5,9 @@ clientgofix is a tool for adjusting `k8s.io/client-go` invocations:
 * Replaces existing nil `*metav1.DeleteOptions` arguments with `metav1.DeleteOptions{}`
 * Adds `context` and `metav1` imports where required (deconflicting with existing import and declaration names)
 
+:warning: This tool is under active development and rewrites source files in place by default.
+It is strongly recommended to run this on a version-controlled source tree with all unrelated work committed.
+
 **To install:**
 
 ```sh
