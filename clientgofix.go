@@ -26,16 +26,15 @@ import (
 
 func main() {
 	o := pkg.DefaultFixOptions()
-	flag.StringVar(&o.Dir, "dir", o.Dir, "run in the specified directory (defaults to current directory)")
-	flag.BoolVar(&o.Verbose, "verbose", o.Verbose, "verbose messages")
-	flag.BoolVar(&o.WriteOnError, "write-on-error", o.WriteOnError, "write files even when errors are encountered")
-	flag.BoolVar(&o.Overwrite, "overwrite", o.Overwrite, "overwrite files in place (when false, results are written to peer tmp files)")
+	flag.BoolVar(&o.Overwrite, "overwrite", o.Overwrite, "overwrite files in place (defaults to true; when false, results are written to peer tmp files)")
+	flag.BoolVar(&o.WriteOnError, "write-on-error", o.WriteOnError, "write files even when errors are encountered (defaults to false)")
 	flag.Parse()
 	o.Packages = flag.CommandLine.Args()
 	if len(o.Packages) == 0 {
-		fmt.Println("Usage: clientgofix [packages]")
+		fmt.Println("Usage: clientgofix [-overwrite=false] [-write-on-error=true] [packages]")
 		fmt.Println()
 		fmt.Println("Example: clientgofix ./...")
+		flag.CommandLine.Usage()
 		os.Exit(1)
 	}
 	if err := o.Complete(); err != nil {
