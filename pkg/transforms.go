@@ -22,6 +22,7 @@ import (
 	"go/parser"
 	"go/token"
 	"path"
+	"strings"
 
 	"github.com/dave/dst"
 )
@@ -61,11 +62,78 @@ func getOrCreateImport(c *TransformFileContext, importPackage, preferredAlias st
 		}
 	}
 
+	localName := preferredAlias
+	if len(localName) == 0 {
+		localName = path.Base(importPackage)
+	}
+	// Scan existing import aliases/variable/func/type/const names in the file to avoid conflicts
+	used := map[string]bool{}
+	for _, i := range c.file.Imports {
+		if i.Name != nil {
+			// fmt.Println("import", i.Name.String())
+			used[i.Name.String()] = true
+		} else {
+			// fmt.Println("import", path.Base(strings.Trim(i.Path.Value, `"`)))
+			used[path.Base(strings.Trim(i.Path.Value, `"`))] = true
+		}
+	}
+	ast.Inspect(c.file, func(n ast.Node) bool {
+		if n == nil {
+			return true
+		}
+		switch n := n.(type) {
+		case *ast.FuncDecl:
+			// fmt.Println("func", n.Name.Name)
+			if n.Name != nil {
+				used[n.Name.Name] = true
+			}
+		case *ast.ValueSpec:
+			for _, name := range n.Names {
+				// fmt.Println("value", name.Name)
+				used[name.Name] = true
+			}
+		case *ast.TypeSpec:
+			if n.Name != nil {
+				// fmt.Println("type", n.Name.Name)
+				used[n.Name.Name] = true
+			}
+		case *ast.AssignStmt:
+			if n.Tok == token.DEFINE {
+				for _, lhs := range n.Lhs {
+					if ident, ok := lhs.(*ast.Ident); ok {
+						// fmt.Printf("assign %v\n", ident.Name)
+						used[ident.Name] = true
+					}
+				}
+			}
+		case *ast.Field:
+			for _, name := range n.Names {
+				// fmt.Println("field name", name.Name)
+				used[name.Name] = true
+			}
+		default:
+			// fmt.Printf("%T: %v\n", n, n)
+		}
+		return true
+	})
+
+	deconflicted := false
+	if used[localName] {
+		for i := 2; ; i++ {
+			potentialName := fmt.Sprintf("%s%d", localName, i)
+			if !used[potentialName] {
+				localName = potentialName
+				deconflicted = true
+				break
+			}
+		}
+	}
+
 	// Create a new import spec
 	importSpec := &ast.ImportSpec{Path: &ast.BasicLit{Kind: token.STRING, Value: expectedLiteral}}
 	// Add an alias if specified
-	if len(preferredAlias) > 0 {
-		importSpec.Name = &ast.Ident{Name: preferredAlias}
+	if len(preferredAlias) > 0 || deconflicted {
+		importSpec.Name = &ast.Ident{Name: localName}
 	}
 
 	// Create a decorated node
@@ -111,11 +179,7 @@ func getOrCreateImport(c *TransformFileContext, importPackage, preferredAlias st
 		)
 
 		c.Modified(fmt.Sprintf("added %s import", importPackage))
-		if len(preferredAlias) > 0 {
-			return preferredAlias, nil
-		} else {
-			return path.Base(importPackage), nil
-		}
+		return localName, nil
 	}
 	return "", fmt.Errorf("no import declaration block found")
 }
@@ -146,7 +210,12 @@ func ensureArgAtIndex(pos int, argType string, f makeArgExprFunc) Transformer {
 	return TransformFunc(func(c *TransformFileContext) {
 		if len(c.call.Args) > pos {
 			typeOf := c.pkg.TypesInfo.TypeOf(c.call.Args[pos])
-			if typeOf != nil && typeOf.String() == argType {
+			if typeOf == nil {
+				// can happen on a rerun if there is a local variable masking the inserted package alias
+				c.Warning(fmt.Sprintf("cannot determine type of arg %d, skipping inserting %s (check for variables shadowing import)", pos, argType))
+				return
+			}
+			if typeOf.String() == argType {
 				return
 			}
 		}
