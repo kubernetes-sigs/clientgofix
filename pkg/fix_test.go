@@ -46,11 +46,11 @@ func TestFix(t *testing.T) {
 						t.Fatal(err)
 					}
 					for _, subdir := range subdirs {
-						if !subdir.IsDir() {
+						if !subdir.IsDir() || subdir.Name() == "vendor" {
 							continue
 						}
 						t.Run(subdir.Name(), func(t *testing.T) {
-							runFix(t, filepath.Join(tempDir, "src", "example.com", subdir.Name()))
+							runFix(t, filepath.Join(tempDir, "src", "example.com"), fmt.Sprintf("./%s/...", subdir.Name()))
 							diffOutput(t, filepath.Join(tempDir, "src", "example.com"), subdir.Name())
 						})
 					}
@@ -200,12 +200,12 @@ func runGoModVendor(t *testing.T, dir string) {
 	}
 }
 
-func runFix(t *testing.T, dir string) {
+func runFix(t *testing.T, dir, pkg string) {
 	b := bytes.NewBuffer([]byte{})
 	o := DefaultFixOptions()
 	o.Dir = dir
 	o.Out = b
-	o.Packages = []string{"./..."}
+	o.Packages = []string{pkg}
 	err := o.Run()
 	if err != nil {
 		t.Log(b.String())
