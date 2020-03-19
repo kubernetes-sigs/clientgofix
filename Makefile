@@ -41,8 +41,13 @@ lint:
 
 check_go_version:
 	@OUTPUT=`go version`; \
-	if [[ "$$OUTPUT" != *"go1.13."* && "$$OUTPUT" != *"go1.14."* && "$$OUTPUT" != *"devel"* ]]; then \
-		echo "Expected: go version go1.13.* or go1.14.* or devel"; \
+	case "$$OUTPUT" in \
+	*"go1.13."*);; \
+	*"go1.14."*);; \
+	*"devel"*);; \
+	*) \
+		echo "Expected: go version go1.13.*, go1.14.*, or devel"; \
 		echo "Found:    $$OUTPUT"; \
 		exit 1; \
-	fi
+	;; \
+	esac

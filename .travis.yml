@@ -3,6 +3,12 @@ language: go
 go:
 - 1.13.x
 - 1.14.x
+- master
+
+jobs:
+  fast_finish: true
+  allow_failures:
+    go: master
 
 go_import_path: github.com/liggitt/clientgofix
 
