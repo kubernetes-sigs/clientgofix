@@ -245,10 +245,9 @@ func diffOutput(t *testing.T, resultDir, subDir string) {
 				if err := ioutil.WriteFile(expectFile, data, os.FileMode(0644)); err != nil {
 					t.Errorf("%s: %v", name, err)
 					return nil
-				} else {
-					t.Errorf("%s: wrote testdata, rerun test", name)
-					return nil
 				}
+				t.Errorf("%s: wrote testdata, rerun test", name)
+				return nil
 			} else if err != nil {
 				t.Log("set UPDATE_FIXTURE_DATA=true to write expected testdata")
 				t.Errorf("%s: %v", name, err)

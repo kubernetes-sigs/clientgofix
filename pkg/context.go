@@ -30,7 +30,7 @@ import (
 
 var fileIndent = "  "
 
-type TransformFileContext struct {
+type transformFileContext struct {
 	verbose bool
 	out     io.Writer
 
@@ -50,21 +50,21 @@ type TransformFileContext struct {
 	warned   bool
 }
 
-func (c *TransformFileContext) Warning(msg string) {
+func (c *transformFileContext) Warning(msg string) {
 	if !c.modified && c.err == nil && !c.warned {
 		fmt.Fprintf(c.out, "%v\n", c.pos.Filename)
 	}
 	fmt.Fprintf(c.out, "%s%v: %s: WARNING: %s\n", fileIndent, c.pos.Line, c.function, msg)
 	c.warned = true
 }
-func (c *TransformFileContext) Error(err error) {
+func (c *transformFileContext) Error(err error) {
 	if !c.modified && c.err == nil && !c.warned {
 		fmt.Fprintf(c.out, "%v\n", c.pos.Filename)
 	}
 	fmt.Fprintf(c.out, "%s%v: %s: ERROR: %v\n", fileIndent, c.pos.Line, c.function, err)
 	c.err = err
 }
-func (c *TransformFileContext) Modified(msg string) {
+func (c *transformFileContext) Modified(msg string) {
 	if !c.modified && c.err == nil && !c.warned {
 		fmt.Fprintf(c.out, "%v\n", c.pos.Filename)
 	}

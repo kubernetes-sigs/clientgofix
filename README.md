@@ -21,7 +21,7 @@ Manual adjustments required:
 ```sh
 git clone https://github.com/liggitt/clientgofix.git
 cd clientgofix
-go install ./
+make install
 ```
 
 **To use:**

@@ -25,10 +25,20 @@ import (
 )
 
 func main() {
+	version := false
+	flag.BoolVar(&version, "version", version, "display version information")
+
 	o := pkg.DefaultFixOptions()
 	flag.BoolVar(&o.Overwrite, "overwrite", o.Overwrite, "overwrite files in place (defaults to true; when false, results are written to peer tmp files)")
 	flag.BoolVar(&o.WriteOnError, "write-on-error", o.WriteOnError, "write files even when errors are encountered (defaults to false)")
+
 	flag.Parse()
+
+	if version {
+		fmt.Printf("clientgofix version %s\n", pkg.Version)
+		os.Exit(0)
+	}
+
 	o.Packages = flag.CommandLine.Args()
 	if len(o.Packages) == 0 {
 		fmt.Println("Usage: clientgofix [-overwrite=false] [-write-on-error=true] [packages]")

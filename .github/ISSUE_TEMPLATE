@@ -3,14 +3,14 @@ Thanks for reporting an issue with `clientgofix`.
 Please provide all of the following info to help reproduce/resolve issues quickly.
 -->
 
-<!-- Run `git show` in the clone of `clientgofix` you built from to find the version -->
-clientgofix version: ...
-
-clientgofix invocation: ...
-
-clientgofix output:
+clientgofix version:
 ```
-... provide clientgofix output ...
+... output of `clientgofix -version`
+```
+
+clientgofix invocation/output:
+```
+...
 ```
 
 <!-- Run the following commands in the same location and shell environment you ran `clientgofix` -->

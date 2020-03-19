@@ -27,26 +27,26 @@ import (
 	"github.com/dave/dst"
 )
 
-type Transformer interface {
-	Transform(*TransformFileContext)
+type transformer interface {
+	Transform(*transformFileContext)
 }
-type TransformFunc func(*TransformFileContext)
+type transformFunc func(*transformFileContext)
 
-func (f TransformFunc) Transform(c *TransformFileContext) {
+func (f transformFunc) Transform(c *transformFileContext) {
 	f(c)
 }
 
-type Transforms []Transformer
+type transformers []transformer
 
-func (t Transforms) Transform(c *TransformFileContext) {
+func (t transformers) Transform(c *transformFileContext) {
 	for _, transformer := range t {
 		transformer.Transform(c)
 	}
 }
 
-type makeArgExprFunc func(*TransformFileContext) (ast.Expr, error)
+type makeArgExprFunc func(*transformFileContext) (ast.Expr, error)
 
-func getOrCreateImport(c *TransformFileContext, importPackage, preferredAlias string) (alias string, err error) {
+func getOrCreateImport(c *transformFileContext, importPackage, preferredAlias string) (alias string, err error) {
 	// the import package will be quoted
 	expectedLiteral := fmt.Sprintf("%q", importPackage)
 
@@ -184,7 +184,7 @@ func getOrCreateImport(c *TransformFileContext, importPackage, preferredAlias st
 	return "", fmt.Errorf("no import declaration block found")
 }
 
-func argToDecArg(c *TransformFileContext, arg ast.Expr, matchIndex int) (dst.Expr, error) {
+func argToDecArg(c *transformFileContext, arg ast.Expr, matchIndex int) (dst.Expr, error) {
 	// Convert to decorated
 	decoratedNode, err := c.dec.DecorateNode(arg)
 	if err != nil {
@@ -206,8 +206,8 @@ func argToDecArg(c *TransformFileContext, arg ast.Expr, matchIndex int) (dst.Exp
 
 // ensureArgAtIndex checks if the arg at the given position is of the specified type,
 // and inserts a new arg made by f() at that position if it is not of the specified type.
-func ensureArgAtIndex(pos int, argType string, f makeArgExprFunc) Transformer {
-	return TransformFunc(func(c *TransformFileContext) {
+func ensureArgAtIndex(pos int, argType string, f makeArgExprFunc) transformer {
+	return transformFunc(func(c *transformFileContext) {
 		if len(c.call.Args) > pos {
 			typeOf := c.pkg.TypesInfo.TypeOf(c.call.Args[pos])
 			if typeOf == nil {
@@ -253,8 +253,8 @@ func ensureArgAtIndex(pos int, argType string, f makeArgExprFunc) Transformer {
 		c.Modified(fmt.Sprintf("inserted %s as arg %d", argType, pos))
 	})
 }
-func ensureLastArg(argType string, f makeArgExprFunc) Transformer {
-	return TransformFunc(func(c *TransformFileContext) {
+func ensureLastArg(argType string, f makeArgExprFunc) transformer {
+	return transformFunc(func(c *transformFileContext) {
 		var msg string
 		if len(c.call.Args) > 0 {
 			typeOf := c.pkg.TypesInfo.TypeOf(c.call.Args[len(c.call.Args)-1])
@@ -290,8 +290,8 @@ func ensureLastArg(argType string, f makeArgExprFunc) Transformer {
 		c.Modified(msg)
 	})
 }
-func replaceArgAtIndexIfNil(argIndex int, argType string, f makeArgExprFunc) Transformer {
-	return TransformFunc(func(c *TransformFileContext) {
+func replaceArgAtIndexIfNil(argIndex int, argType string, f makeArgExprFunc) transformer {
+	return transformFunc(func(c *transformFileContext) {
 		// argIndex cannot be greater than the current length
 		if argIndex > len(c.call.Args) {
 			// c.Error(fmt.Errorf("cannot set arg %d; current arg length is %d", argIndex, len(c.call.Args)))
@@ -325,8 +325,8 @@ func replaceArgAtIndexIfNil(argIndex int, argType string, f makeArgExprFunc) Tra
 		c.Modified(fmt.Sprintf("replaced nil arg at %d with %s", argIndex, argType))
 	})
 }
-func dereferenceArgAtIndexIfPointer(argIndex int, argType string) Transformer {
-	return TransformFunc(func(c *TransformFileContext) {
+func dereferenceArgAtIndexIfPointer(argIndex int, argType string) transformer {
+	return transformFunc(func(c *transformFileContext) {
 		// argIndex cannot be greater than the current length
 		if argIndex > len(c.call.Args) {
 			// c.Error(fmt.Errorf("cannot set arg %d; current arg length is %d", argIndex, len(c.call.Args)))
@@ -371,7 +371,7 @@ func dereferenceArgAtIndexIfPointer(argIndex int, argType string) Transformer {
 	})
 }
 
-func makeContextArg(c *TransformFileContext) (ast.Expr, error) {
+func makeContextArg(c *transformFileContext) (ast.Expr, error) {
 	contextAlias, err := getOrCreateImport(c, "context", "")
 	if err != nil {
 		return nil, err
@@ -379,7 +379,7 @@ func makeContextArg(c *TransformFileContext) (ast.Expr, error) {
 	return parser.ParseExpr(fmt.Sprintf("%s.TODO()", contextAlias))
 }
 func makeMetav1OptionsArg(optionsType string) makeArgExprFunc {
-	return func(c *TransformFileContext) (ast.Expr, error) {
+	return func(c *transformFileContext) (ast.Expr, error) {
 		metav1Alias, err := getOrCreateImport(c, "k8s.io/apimachinery/pkg/apis/meta/v1", "metav1")
 		if err != nil {
 			return nil, err

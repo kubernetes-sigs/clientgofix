@@ -30,6 +30,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+// FixOptions controls the behavior of a fix operation
 type FixOptions struct {
 	WriteOnError bool
 	Overwrite    bool
@@ -39,6 +40,7 @@ type FixOptions struct {
 	Out          io.Writer
 }
 
+// DefaultFixOptions returns a default set of options
 func DefaultFixOptions() *FixOptions {
 	return &FixOptions{
 		WriteOnError: false,
@@ -48,6 +50,7 @@ func DefaultFixOptions() *FixOptions {
 	}
 }
 
+// Complete populates any derived options
 func (o *FixOptions) Complete() error {
 	if o.Out == nil {
 		o.Out = os.Stdout
@@ -58,6 +61,7 @@ func (o *FixOptions) Complete() error {
 	return nil
 }
 
+// Validate ensures the specified options are valid
 func (o *FixOptions) Validate() error {
 	if o.Out == nil {
 		return fmt.Errorf("no output specified")
@@ -68,6 +72,7 @@ func (o *FixOptions) Validate() error {
 	return nil
 }
 
+// Run executes the fix operation
 func (o *FixOptions) Run() error {
 	start := time.Now()
 	pkgs, err := packages.Load(&packages.Config{
@@ -107,7 +112,7 @@ func (o *FixOptions) Run() error {
 				return fmt.Errorf("error processing %s: %w", filename, err)
 			}
 
-			transformContext := &TransformFileContext{
+			transformContext := &transformFileContext{
 				dec:      dec,
 				decFile:  decFile,
 				pkg:      pkg,

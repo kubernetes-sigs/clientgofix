@@ -18,14 +18,14 @@ package pkg
 
 import "strings"
 
-type SelectorMatcher func(selectorType, method string) bool
+type selectorMatcher func(selectorType, method string) bool
 
-func matchTypeAndMethod(expectedType, expectedMethod string) SelectorMatcher {
+func matchTypeAndMethod(expectedType, expectedMethod string) selectorMatcher {
 	return func(selectorType, method string) bool {
 		return expectedType == selectorType && expectedMethod == method
 	}
 }
-func matchTypePrefixAndMethod(prefixes []string, expectedMethod string) SelectorMatcher {
+func matchTypePrefixAndMethod(prefixes []string, expectedMethod string) selectorMatcher {
 	return func(selectorType, method string) bool {
 		if expectedMethod != method {
 			return false
@@ -51,8 +51,8 @@ var generatedClientPrefixes = []string{
 
 var transforms = []struct {
 	name      string
-	matcher   SelectorMatcher
-	transform Transformer
+	matcher   selectorMatcher
+	transform transformer
 }{
 	// Expansions
 	// git diff upstream/release-1.17 upstream/release-1.18 --name-only -- staging/src/k8s.io/client-go/kubernetes/typed/ | grep expansion | egrep -v 'generated|fake|authorization|authentication' | xargs -n 1 git diff upstream/release-1.17 upstream/release-1.18 -- | egrep '^[-+]\t[A-Z]'
@@ -62,7 +62,7 @@ var transforms = []struct {
 	{
 		"UpdateApproval",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "UpdateApproval"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
 		},
@@ -73,7 +73,7 @@ var transforms = []struct {
 	{
 		"Finalize",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "Finalize"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
 		},
@@ -84,7 +84,7 @@ var transforms = []struct {
 	{
 		"PatchStatus",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "PatchStatus"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -94,7 +94,7 @@ var transforms = []struct {
 	{
 		"Bind",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "Bind"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions", makeMetav1OptionsArg("CreateOptions")),
 		},
@@ -105,7 +105,7 @@ var transforms = []struct {
 	{
 		"Evict",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "Evict"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -115,7 +115,7 @@ var transforms = []struct {
 	{
 		"CreateToken",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "CreateToken"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions", makeMetav1OptionsArg("CreateOptions")),
 		},
@@ -126,7 +126,7 @@ var transforms = []struct {
 	{
 		"Rollback",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "Rollback"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions", makeMetav1OptionsArg("CreateOptions")),
 		},
@@ -140,7 +140,7 @@ var transforms = []struct {
 	{
 		"Get",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/scale"}, "Get"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.GetOptions", makeMetav1OptionsArg("GetOptions")),
 		},
@@ -150,7 +150,7 @@ var transforms = []struct {
 	{
 		"Update",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/scale"}, "Update"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
 		},
@@ -160,7 +160,7 @@ var transforms = []struct {
 	{
 		"Patch",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/scale"}, "Patch"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.PatchOptions", makeMetav1OptionsArg("PatchOptions")),
 		},
@@ -173,7 +173,7 @@ var transforms = []struct {
 	{
 		"Do",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/rest."}, "Do"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -182,7 +182,7 @@ var transforms = []struct {
 	{
 		"DoRaw",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/rest."}, "DoRaw"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -191,7 +191,7 @@ var transforms = []struct {
 	{
 		"Stream",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/rest."}, "Stream"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -200,7 +200,7 @@ var transforms = []struct {
 	{
 		"Watch",
 		matchTypePrefixAndMethod([]string{"k8s.io/client-go/rest."}, "Watch"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -209,7 +209,7 @@ var transforms = []struct {
 	{
 		"Get",
 		matchTypePrefixAndMethod(generatedClientPrefixes, "Get"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.GetOptions", makeMetav1OptionsArg("GetOptions")),
 		},
@@ -217,7 +217,7 @@ var transforms = []struct {
 	{
 		"List",
 		matchTypePrefixAndMethod(generatedClientPrefixes, "List"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.ListOptions", makeMetav1OptionsArg("ListOptions")),
 		},
@@ -225,7 +225,7 @@ var transforms = []struct {
 	{
 		"Watch",
 		matchTypePrefixAndMethod(generatedClientPrefixes, "Watch"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.ListOptions", makeMetav1OptionsArg("ListOptions")),
 		},
@@ -233,7 +233,7 @@ var transforms = []struct {
 	{
 		"Create",
 		matchTypePrefixAndMethod(generatedClientPrefixes, "Create"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions", makeMetav1OptionsArg("CreateOptions")),
 		},
@@ -241,7 +241,7 @@ var transforms = []struct {
 	{
 		"Update",
 		matchTypePrefixAndMethod(generatedClientPrefixes, "Update"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
 		},
@@ -249,7 +249,7 @@ var transforms = []struct {
 	{
 		"UpdateStatus",
 		matchTypePrefixAndMethod(generatedClientPrefixes, "UpdateStatus"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
 		},
@@ -257,7 +257,7 @@ var transforms = []struct {
 	{
 		"Patch",
 		matchTypePrefixAndMethod(generatedClientPrefixes, "Patch"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			ensureArgAtIndex(4, "k8s.io/apimachinery/pkg/apis/meta/v1.PatchOptions", makeMetav1OptionsArg("PatchOptions")),
 		},
@@ -265,7 +265,7 @@ var transforms = []struct {
 	{
 		"Delete",
 		matchTypePrefixAndMethod(generatedClientPrefixes, "Delete"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			dereferenceArgAtIndexIfPointer(2, "*k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
 			replaceArgAtIndexIfNil(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
@@ -274,7 +274,7 @@ var transforms = []struct {
 	{
 		"DeleteCollection",
 		matchTypePrefixAndMethod(generatedClientPrefixes, "DeleteCollection"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			dereferenceArgAtIndexIfPointer(1, "*k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
 			replaceArgAtIndexIfNil(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
@@ -292,7 +292,7 @@ var transforms = []struct {
 	{
 		"Get",
 		matchTypePrefixAndMethod(dynamicClientPrefixes, "Get"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -305,7 +305,7 @@ var transforms = []struct {
 	{
 		"List",
 		matchTypePrefixAndMethod(dynamicClientPrefixes, "List"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -318,7 +318,7 @@ var transforms = []struct {
 	{
 		"Watch",
 		matchTypePrefixAndMethod(dynamicClientPrefixes, "Watch"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -328,7 +328,7 @@ var transforms = []struct {
 	{
 		"Create",
 		matchTypePrefixAndMethod(dynamicClientPrefixes, "Create"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -338,7 +338,7 @@ var transforms = []struct {
 	{
 		"Update",
 		matchTypePrefixAndMethod(dynamicClientPrefixes, "Update"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -348,7 +348,7 @@ var transforms = []struct {
 	{
 		"UpdateStatus",
 		matchTypePrefixAndMethod(dynamicClientPrefixes, "UpdateStatus"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -361,7 +361,7 @@ var transforms = []struct {
 	{
 		"Patch",
 		matchTypePrefixAndMethod(dynamicClientPrefixes, "Patch"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 		},
 	},
@@ -374,7 +374,7 @@ var transforms = []struct {
 	{
 		"Delete",
 		matchTypePrefixAndMethod(dynamicClientPrefixes, "Delete"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			dereferenceArgAtIndexIfPointer(2, "*k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
 			replaceArgAtIndexIfNil(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
@@ -389,7 +389,7 @@ var transforms = []struct {
 	{
 		"DeleteCollection",
 		matchTypePrefixAndMethod(dynamicClientPrefixes, "DeleteCollection"),
-		Transforms{
+		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
 			dereferenceArgAtIndexIfPointer(1, "*k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
 			replaceArgAtIndexIfNil(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
