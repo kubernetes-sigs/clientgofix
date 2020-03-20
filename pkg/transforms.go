@@ -215,7 +215,7 @@ func ensureArgAtIndex(pos int, argType string, f makeArgExprFunc) transformer {
 				c.Warning(fmt.Sprintf("cannot determine type of arg %d, skipping inserting %s (check for variables shadowing import)", pos, argType))
 				return
 			}
-			if typeOf.String() == argType {
+			if typeOf.String() == argType || strings.HasSuffix(typeOf.String(), makeVendorSuffix(argType)) {
 				return
 			}
 		}
@@ -260,7 +260,7 @@ func ensureLastArg(argType string, f makeArgExprFunc) transformer {
 			typeOf := c.pkg.TypesInfo.TypeOf(c.call.Args[len(c.call.Args)-1])
 			if typeOf == nil {
 				msg = fmt.Sprintf("appended %s arg", argType)
-			} else if typeOf.String() == argType {
+			} else if typeOf.String() == argType || strings.HasSuffix(typeOf.String(), makeVendorSuffix(argType)) {
 				return
 			} else {
 				msg = fmt.Sprintf("last arg was %s, appended %s", typeOf.String(), argType)
@@ -338,7 +338,12 @@ func dereferenceArgAtIndexIfPointer(argIndex int, argType string) transformer {
 		if typeOf == nil {
 			return
 		}
-		if typeOf.String() != argType {
+		typeStr := typeOf.String()
+		if !strings.HasPrefix(typeStr, "*") {
+			return
+		}
+		typeStr = strings.TrimPrefix(typeStr, "*")
+		if typeStr != argType && !strings.HasSuffix(typeStr, makeVendorSuffix(argType)) {
 			return
 		}
 
@@ -386,4 +391,8 @@ func makeMetav1OptionsArg(optionsType string) makeArgExprFunc {
 		}
 		return parser.ParseExpr(fmt.Sprintf("%s.%s{}", metav1Alias, optionsType))
 	}
+}
+
+func makeVendorSuffix(t string) string {
+	return "/vendor/" + t
 }

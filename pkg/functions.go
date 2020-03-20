@@ -22,7 +22,10 @@ type selectorMatcher func(selectorType, method string) bool
 
 func matchTypeAndMethod(expectedType, expectedMethod string) selectorMatcher {
 	return func(selectorType, method string) bool {
-		return expectedType == selectorType && expectedMethod == method
+		if expectedMethod != method {
+			return false
+		}
+		return expectedType == selectorType || strings.HasSuffix(selectorType, makeVendorSuffix(expectedType))
 	}
 }
 func matchTypePrefixAndMethod(prefixes []string, expectedMethod string) selectorMatcher {
@@ -31,7 +34,7 @@ func matchTypePrefixAndMethod(prefixes []string, expectedMethod string) selector
 			return false
 		}
 		for _, prefix := range prefixes {
-			if strings.HasPrefix(selectorType, prefix) {
+			if strings.HasPrefix(selectorType, prefix) || strings.Contains(selectorType, makeVendorSuffix(prefix)) {
 				return true
 			}
 		}
@@ -267,7 +270,7 @@ var transforms = []struct {
 		matchTypePrefixAndMethod(generatedClientPrefixes, "Delete"),
 		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			dereferenceArgAtIndexIfPointer(2, "*k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
+			dereferenceArgAtIndexIfPointer(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
 			replaceArgAtIndexIfNil(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
 		},
 	},
@@ -276,7 +279,7 @@ var transforms = []struct {
 		matchTypePrefixAndMethod(generatedClientPrefixes, "DeleteCollection"),
 		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			dereferenceArgAtIndexIfPointer(1, "*k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
+			dereferenceArgAtIndexIfPointer(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
 			replaceArgAtIndexIfNil(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
 		},
 	},
@@ -376,7 +379,7 @@ var transforms = []struct {
 		matchTypePrefixAndMethod(dynamicClientPrefixes, "Delete"),
 		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			dereferenceArgAtIndexIfPointer(2, "*k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
+			dereferenceArgAtIndexIfPointer(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
 			replaceArgAtIndexIfNil(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
 		},
 	},
@@ -391,7 +394,7 @@ var transforms = []struct {
 		matchTypePrefixAndMethod(dynamicClientPrefixes, "DeleteCollection"),
 		transformers{
 			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			dereferenceArgAtIndexIfPointer(1, "*k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
+			dereferenceArgAtIndexIfPointer(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
 			replaceArgAtIndexIfNil(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
 		},
 	},
