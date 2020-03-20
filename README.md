@@ -19,7 +19,7 @@ Manual adjustments required:
 **To install:**
 
 ```sh
-git clone https://github.com/liggitt/clientgofix.git
+git clone https://github.com/kubernetes-sigs/clientgofix.git
 cd clientgofix
 make install
 ```

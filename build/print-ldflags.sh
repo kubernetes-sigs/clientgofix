@@ -2,4 +2,4 @@
 
 version=$($(dirname "${BASH_SOURCE}")/print-version.sh)
 
-echo "-ldflags \"-X github.com/liggitt/clientgofix/pkg.Version=${version}\""
+echo "-ldflags \"-X sigs.k8s.io/clientgofix/pkg.Version=${version}\""
