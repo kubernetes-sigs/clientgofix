@@ -137,6 +137,9 @@ func prepDeps(t *testing.T, tempDir string, module, vendor bool, version string)
 		os.Setenv("GO111MODULE", "on")
 		runGoModVendor(t, exampleDir)
 
+		// set $GOPATH to tempDir
+		os.Setenv("GOPATH", tempDir)
+
 		// disable modules and remove go.mod file
 		os.Setenv("GO111MODULE", "off")
 		if err := os.Remove(goModFile); err != nil {
