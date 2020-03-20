@@ -32,7 +32,7 @@ import (
 func TestFix(t *testing.T) {
 	for _, module := range []bool{true, false} {
 		for _, vendor := range []bool{true, false} {
-			for _, version := range []string{"v0.17.4", "v0.18.0-beta.2"} {
+			for _, version := range []string{"v0.17.4", "v0.18.0-rc.1"} {
 				name := ifelse(module, "mod", "gopath") + "_" + ifelse(vendor, "vendor", "novendor") + "_" + version
 				t.Run(name, func(t *testing.T) {
 					defer restoreEnv()()
