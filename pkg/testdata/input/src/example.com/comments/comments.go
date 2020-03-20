@@ -1,5 +1,5 @@
 // package comment
-package misc
+package comments
 
 // before imports comment
 import (
