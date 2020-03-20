@@ -18,4 +18,5 @@ cache:
     - $HOME/gopath/pkg/mod
 
 script:
+- go get github.com/golang/lint/golint
 - make build test fmt lint vet
