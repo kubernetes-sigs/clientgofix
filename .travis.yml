@@ -18,5 +18,5 @@ cache:
     - $HOME/gopath/pkg/mod
 
 script:
-- go get github.com/golang/lint/golint
+- cd $TMPDIR && go get golang.org/x/lint/golint && cd -
 - make build test fmt lint vet
