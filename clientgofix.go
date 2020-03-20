@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/liggitt/clientgofix/pkg"
+	"sigs.k8s.io/clientgofix/pkg"
 )
 
 func main() {

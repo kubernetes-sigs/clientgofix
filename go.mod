@@ -1,4 +1,4 @@
-module github.com/liggitt/clientgofix
+module sigs.k8s.io/clientgofix
 
 go 1.13
 

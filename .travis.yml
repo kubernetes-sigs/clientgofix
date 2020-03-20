@@ -10,7 +10,7 @@ jobs:
   allow_failures:
     go: master
 
-go_import_path: github.com/liggitt/clientgofix
+go_import_path: sigs.k8s.io/clientgofix
 
 cache:
   directories:
