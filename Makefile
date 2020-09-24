@@ -44,9 +44,10 @@ check_go_version:
 	case "$$OUTPUT" in \
 	*"go1.13."*);; \
 	*"go1.14."*);; \
+	*"go1.15."*);; \
 	*"devel"*);; \
 	*) \
-		echo "Expected: go version go1.13.*, go1.14.*, or devel"; \
+		echo "Expected: go version go1.13.*, go1.14.*, go1.15.*, or devel"; \
 		echo "Found:    $$OUTPUT"; \
 		exit 1; \
 	;; \
