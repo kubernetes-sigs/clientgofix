@@ -16,7 +16,10 @@ limitations under the License.
 
 package pkg
 
-import "strings"
+import (
+	"sort"
+	"strings"
+)
 
 type selectorMatcher func(selectorType, method string) bool
 
@@ -46,356 +49,376 @@ var dynamicClientPrefixes = []string{
 	"k8s.io/client-go/dynamic.",
 	"k8s.io/client-go/metadata.",
 }
-var generatedClientPrefixes = []string{
-	"k8s.io/client-go/kubernetes/typed/",
-	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/",
-	"k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/",
+
+func genClientPrefixes(customPrefixes []string) []string {
+	prefixMap := map[string]struct{}{
+		"k8s.io/client-go/kubernetes/typed/":                                     {},
+		"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/":   {},
+		"k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/": {},
+	}
+	for _, p := range customPrefixes {
+		prefixMap[p] = struct{}{}
+	}
+	prefixes := make([]string, 0, len(prefixMap))
+	for p := range prefixMap {
+		prefixes = append(prefixes, p)
+	}
+	sort.Strings(prefixes)
+	return prefixes
 }
 
-var transforms = []struct {
+func genTransforms(customPrefixes []string) []struct {
 	name      string
 	matcher   selectorMatcher
 	transform transformer
-}{
-	// Expansions
-	// git diff upstream/release-1.17 upstream/release-1.18 --name-only -- staging/src/k8s.io/client-go/kubernetes/typed/ | grep expansion | egrep -v 'generated|fake|authorization|authentication' | xargs -n 1 git diff upstream/release-1.17 upstream/release-1.18 -- | egrep '^[-+]\t[A-Z]'
+} {
+	generatedClientPrefixes := genClientPrefixes(customPrefixes)
 
-	// - UpdateApproval(                     certificateSigningRequest *certificates.CertificateSigningRequest                           ) (result *certificates.CertificateSigningRequest, err error)
-	// + UpdateApproval(ctx context.Context, certificateSigningRequest *certificates.CertificateSigningRequest, opts metav1.UpdateOptions) (result *certificates.CertificateSigningRequest, err error)
-	{
-		"UpdateApproval",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "UpdateApproval"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
-		},
-	},
+	return []struct {
+		name      string
+		matcher   selectorMatcher
+		transform transformer
+	}{
+		// Expansions
+		// git diff upstream/release-1.17 upstream/release-1.18 --name-only -- staging/src/k8s.io/client-go/kubernetes/typed/ | grep expansion | egrep -v 'generated|fake|authorization|authentication' | xargs -n 1 git diff upstream/release-1.17 upstream/release-1.18 -- | egrep '^[-+]\t[A-Z]'
 
-	// - Finalize(                     item *v1.Namespace                           ) (*v1.Namespace, error)
-	// + Finalize(ctx context.Context, item *v1.Namespace, opts metav1.UpdateOptions) (*v1.Namespace, error)
-	{
-		"Finalize",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "Finalize"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
+		// - UpdateApproval(                     certificateSigningRequest *certificates.CertificateSigningRequest                           ) (result *certificates.CertificateSigningRequest, err error)
+		// + UpdateApproval(ctx context.Context, certificateSigningRequest *certificates.CertificateSigningRequest, opts metav1.UpdateOptions) (result *certificates.CertificateSigningRequest, err error)
+		{
+			"UpdateApproval",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "UpdateApproval"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
+			},
 		},
-	},
 
-	// - PatchStatus(                     nodeName string, data []byte) (*v1.Node, error)
-	// + PatchStatus(ctx context.Context, nodeName string, data []byte) (*v1.Node, error)
-	{
-		"PatchStatus",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "PatchStatus"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
+		// - Finalize(                     item *v1.Namespace                           ) (*v1.Namespace, error)
+		// + Finalize(ctx context.Context, item *v1.Namespace, opts metav1.UpdateOptions) (*v1.Namespace, error)
+		{
+			"Finalize",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "Finalize"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
+			},
 		},
-	},
 
-	// - Bind(                     binding *v1.Binding                           ) error
-	// + Bind(ctx context.Context, binding *v1.Binding, opts metav1.CreateOptions) error
-	{
-		"Bind",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "Bind"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions", makeMetav1OptionsArg("CreateOptions")),
+		// - PatchStatus(                     nodeName string, data []byte) (*v1.Node, error)
+		// + PatchStatus(ctx context.Context, nodeName string, data []byte) (*v1.Node, error)
+		{
+			"PatchStatus",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "PatchStatus"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
 
-	// - Evict(                     eviction *policy.Eviction) error
-	// + Evict(ctx context.Context, eviction *policy.Eviction) error
-	{
-		"Evict",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "Evict"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
+		// - Bind(                     binding *v1.Binding                           ) error
+		// + Bind(ctx context.Context, binding *v1.Binding, opts metav1.CreateOptions) error
+		{
+			"Bind",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "Bind"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions", makeMetav1OptionsArg("CreateOptions")),
+			},
 		},
-	},
 
-	// - CreateToken(                     name string, tokenRequest *authenticationv1.TokenRequest                           ) (*authenticationv1.TokenRequest, error)
-	// + CreateToken(ctx context.Context, name string, tokenRequest *authenticationv1.TokenRequest, opts metav1.CreateOptions) (*authenticationv1.TokenRequest, error)
-	{
-		"CreateToken",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "CreateToken"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions", makeMetav1OptionsArg("CreateOptions")),
+		// - Evict(                     eviction *policy.Eviction) error
+		// + Evict(ctx context.Context, eviction *policy.Eviction) error
+		{
+			"Evict",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "Evict"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
 
-	// - Rollback(                 *v1beta1.DeploymentRollback                      ) error
-	// + Rollback(context.Context, *v1beta1.DeploymentRollback, metav1.CreateOptions) error
-	{
-		"Rollback",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "Rollback"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions", makeMetav1OptionsArg("CreateOptions")),
+		// - CreateToken(                     name string, tokenRequest *authenticationv1.TokenRequest                           ) (*authenticationv1.TokenRequest, error)
+		// + CreateToken(ctx context.Context, name string, tokenRequest *authenticationv1.TokenRequest, opts metav1.CreateOptions) (*authenticationv1.TokenRequest, error)
+		{
+			"CreateToken",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "CreateToken"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions", makeMetav1OptionsArg("CreateOptions")),
+			},
 		},
-	},
 
-	// Scale
-	// git diff upstream/release-1.17 upstream/release-1.18 -- staging/src/k8s.io/client-go/scale/interfaces.go
+		// - Rollback(                 *v1beta1.DeploymentRollback                      ) error
+		// + Rollback(context.Context, *v1beta1.DeploymentRollback, metav1.CreateOptions) error
+		{
+			"Rollback",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/kubernetes/typed/"}, "Rollback"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions", makeMetav1OptionsArg("CreateOptions")),
+			},
+		},
 
-	// - Get(                     resource schema.GroupResource, name string                        ) (*autoscalingapi.Scale, error)
-	// + Get(ctx context.Context, resource schema.GroupResource, name string, opts metav1.GetOptions) (*autoscalingapi.Scale, error)
-	{
-		"Get",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/scale"}, "Get"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.GetOptions", makeMetav1OptionsArg("GetOptions")),
-		},
-	},
-	// - Update(                     resource schema.GroupResource, scale *autoscalingapi.Scale                           ) (*autoscalingapi.Scale, error)
-	// + Update(ctx context.Context, resource schema.GroupResource, scale *autoscalingapi.Scale, opts metav1.UpdateOptions) (*autoscalingapi.Scale, error)
-	{
-		"Update",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/scale"}, "Update"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
-		},
-	},
-	// - Patch(                     gvr schema.GroupVersionResource, name string, pt types.PatchType, data []byte                          ) (*autoscalingapi.Scale, error)
-	// + Patch(ctx context.Context, gvr schema.GroupVersionResource, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*autoscalingapi.Scale, error)
-	{
-		"Patch",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/scale"}, "Patch"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.PatchOptions", makeMetav1OptionsArg("PatchOptions")),
-		},
-	},
+		// Scale
+		// git diff upstream/release-1.17 upstream/release-1.18 -- staging/src/k8s.io/client-go/scale/interfaces.go
 
-	// Request Do/DoRaw
+		// - Get(                     resource schema.GroupResource, name string                        ) (*autoscalingapi.Scale, error)
+		// + Get(ctx context.Context, resource schema.GroupResource, name string, opts metav1.GetOptions) (*autoscalingapi.Scale, error)
+		{
+			"Get",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/scale"}, "Get"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.GetOptions", makeMetav1OptionsArg("GetOptions")),
+			},
+		},
+		// - Update(                     resource schema.GroupResource, scale *autoscalingapi.Scale                           ) (*autoscalingapi.Scale, error)
+		// + Update(ctx context.Context, resource schema.GroupResource, scale *autoscalingapi.Scale, opts metav1.UpdateOptions) (*autoscalingapi.Scale, error)
+		{
+			"Update",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/scale"}, "Update"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
+			},
+		},
+		// - Patch(                     gvr schema.GroupVersionResource, name string, pt types.PatchType, data []byte                          ) (*autoscalingapi.Scale, error)
+		// + Patch(ctx context.Context, gvr schema.GroupVersionResource, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions) (*autoscalingapi.Scale, error)
+		{
+			"Patch",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/scale"}, "Patch"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.PatchOptions", makeMetav1OptionsArg("PatchOptions")),
+			},
+		},
 
-	// - func (r *Request) Do(                   ) Result {
-	// + func (r *Request) Do(ctx context.Context) Result {
-	{
-		"Do",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/rest."}, "Do"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-		},
-	},
-	// - DoRaw(               ) ([]byte, error)
-	// + DoRaw(context.Context) ([]byte, error)
-	{
-		"DoRaw",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/rest."}, "DoRaw"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-		},
-	},
-	// - Stream(               ) (io.ReadCloser, error)
-	// + Stream(context.Context) (io.ReadCloser, error)
-	{
-		"Stream",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/rest."}, "Stream"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-		},
-	},
-	// - Watch(               ) (watch.Interface, error)
-	// + Watch(context.Context) (watch.Interface, error)
-	{
-		"Watch",
-		matchTypePrefixAndMethod([]string{"k8s.io/client-go/rest."}, "Watch"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-		},
-	},
+		// Request Do/DoRaw
 
-	// Generated clientset methods
-	{
-		"Get",
-		matchTypePrefixAndMethod(generatedClientPrefixes, "Get"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.GetOptions", makeMetav1OptionsArg("GetOptions")),
+		// - func (r *Request) Do(                   ) Result {
+		// + func (r *Request) Do(ctx context.Context) Result {
+		{
+			"Do",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/rest."}, "Do"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
-	{
-		"List",
-		matchTypePrefixAndMethod(generatedClientPrefixes, "List"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.ListOptions", makeMetav1OptionsArg("ListOptions")),
+		// - DoRaw(               ) ([]byte, error)
+		// + DoRaw(context.Context) ([]byte, error)
+		{
+			"DoRaw",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/rest."}, "DoRaw"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
-	{
-		"Watch",
-		matchTypePrefixAndMethod(generatedClientPrefixes, "Watch"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.ListOptions", makeMetav1OptionsArg("ListOptions")),
+		// - Stream(               ) (io.ReadCloser, error)
+		// + Stream(context.Context) (io.ReadCloser, error)
+		{
+			"Stream",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/rest."}, "Stream"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
-	{
-		"Create",
-		matchTypePrefixAndMethod(generatedClientPrefixes, "Create"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions", makeMetav1OptionsArg("CreateOptions")),
+		// - Watch(               ) (watch.Interface, error)
+		// + Watch(context.Context) (watch.Interface, error)
+		{
+			"Watch",
+			matchTypePrefixAndMethod([]string{"k8s.io/client-go/rest."}, "Watch"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
-	{
-		"Update",
-		matchTypePrefixAndMethod(generatedClientPrefixes, "Update"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
-		},
-	},
-	{
-		"UpdateStatus",
-		matchTypePrefixAndMethod(generatedClientPrefixes, "UpdateStatus"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
-		},
-	},
-	{
-		"Patch",
-		matchTypePrefixAndMethod(generatedClientPrefixes, "Patch"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			ensureArgAtIndex(4, "k8s.io/apimachinery/pkg/apis/meta/v1.PatchOptions", makeMetav1OptionsArg("PatchOptions")),
-		},
-	},
-	{
-		"Delete",
-		matchTypePrefixAndMethod(generatedClientPrefixes, "Delete"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			dereferenceArgAtIndexIfPointer(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
-			replaceArgAtIndexIfNil(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
-		},
-	},
-	{
-		"DeleteCollection",
-		matchTypePrefixAndMethod(generatedClientPrefixes, "DeleteCollection"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			dereferenceArgAtIndexIfPointer(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
-			replaceArgAtIndexIfNil(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
-		},
-	},
 
-	// Dynamic/Metadata client methods
+		// Generated clientset methods
+		{
+			"Get",
+			matchTypePrefixAndMethod(generatedClientPrefixes, "Get"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.GetOptions", makeMetav1OptionsArg("GetOptions")),
+			},
+		},
+		{
+			"List",
+			matchTypePrefixAndMethod(generatedClientPrefixes, "List"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.ListOptions", makeMetav1OptionsArg("ListOptions")),
+			},
+		},
+		{
+			"Watch",
+			matchTypePrefixAndMethod(generatedClientPrefixes, "Watch"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.ListOptions", makeMetav1OptionsArg("ListOptions")),
+			},
+		},
+		{
+			"Create",
+			matchTypePrefixAndMethod(generatedClientPrefixes, "Create"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.CreateOptions", makeMetav1OptionsArg("CreateOptions")),
+			},
+		},
+		{
+			"Update",
+			matchTypePrefixAndMethod(generatedClientPrefixes, "Update"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
+			},
+		},
+		{
+			"UpdateStatus",
+			matchTypePrefixAndMethod(generatedClientPrefixes, "UpdateStatus"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureLastArg("k8s.io/apimachinery/pkg/apis/meta/v1.UpdateOptions", makeMetav1OptionsArg("UpdateOptions")),
+			},
+		},
+		{
+			"Patch",
+			matchTypePrefixAndMethod(generatedClientPrefixes, "Patch"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				ensureArgAtIndex(4, "k8s.io/apimachinery/pkg/apis/meta/v1.PatchOptions", makeMetav1OptionsArg("PatchOptions")),
+			},
+		},
+		{
+			"Delete",
+			matchTypePrefixAndMethod(generatedClientPrefixes, "Delete"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				dereferenceArgAtIndexIfPointer(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
+				replaceArgAtIndexIfNil(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
+			},
+		},
+		{
+			"DeleteCollection",
+			matchTypePrefixAndMethod(generatedClientPrefixes, "DeleteCollection"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				dereferenceArgAtIndexIfPointer(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
+				replaceArgAtIndexIfNil(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
+			},
+		},
 
-	// dynamic:
-	// - Get(                     name string, options metav1.GetOptions, subresources ...string) (*unstructured.Unstructured, error)
-	// + Get(ctx context.Context, name string, options metav1.GetOptions, subresources ...string) (*unstructured.Unstructured, error)
-	// metadata:
-	// - Get(                     name string, options metav1.GetOptions, subresources ...string) (*metav1.PartialObjectMetadata, error)
-	// + Get(ctx context.Context, name string, options metav1.GetOptions, subresources ...string) (*metav1.PartialObjectMetadata, error)
-	{
-		"Get",
-		matchTypePrefixAndMethod(dynamicClientPrefixes, "Get"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
+		// Dynamic/Metadata client methods
+
+		// dynamic:
+		// - Get(                     name string, options metav1.GetOptions, subresources ...string) (*unstructured.Unstructured, error)
+		// + Get(ctx context.Context, name string, options metav1.GetOptions, subresources ...string) (*unstructured.Unstructured, error)
+		// metadata:
+		// - Get(                     name string, options metav1.GetOptions, subresources ...string) (*metav1.PartialObjectMetadata, error)
+		// + Get(ctx context.Context, name string, options metav1.GetOptions, subresources ...string) (*metav1.PartialObjectMetadata, error)
+		{
+			"Get",
+			matchTypePrefixAndMethod(dynamicClientPrefixes, "Get"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
-	// dynamic:
-	// - List(                     opts metav1.ListOptions) (*unstructured.UnstructuredList, error)
-	// + List(ctx context.Context, opts metav1.ListOptions) (*unstructured.UnstructuredList, error)
-	// metadata:
-	// - List(                     opts metav1.ListOptions) (*metav1.PartialObjectMetadataList, error)
-	// + List(ctx context.Context, opts metav1.ListOptions) (*metav1.PartialObjectMetadataList, error)
-	{
-		"List",
-		matchTypePrefixAndMethod(dynamicClientPrefixes, "List"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
+		// dynamic:
+		// - List(                     opts metav1.ListOptions) (*unstructured.UnstructuredList, error)
+		// + List(ctx context.Context, opts metav1.ListOptions) (*unstructured.UnstructuredList, error)
+		// metadata:
+		// - List(                     opts metav1.ListOptions) (*metav1.PartialObjectMetadataList, error)
+		// + List(ctx context.Context, opts metav1.ListOptions) (*metav1.PartialObjectMetadataList, error)
+		{
+			"List",
+			matchTypePrefixAndMethod(dynamicClientPrefixes, "List"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
-	// dynamic:
-	// - Watch(                     opts metav1.ListOptions) (watch.Interface, error)
-	// + Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	// metadata:
-	// - Watch(                     opts metav1.ListOptions) (watch.Interface, error)
-	// + Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	{
-		"Watch",
-		matchTypePrefixAndMethod(dynamicClientPrefixes, "Watch"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
+		// dynamic:
+		// - Watch(                     opts metav1.ListOptions) (watch.Interface, error)
+		// + Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+		// metadata:
+		// - Watch(                     opts metav1.ListOptions) (watch.Interface, error)
+		// + Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
+		{
+			"Watch",
+			matchTypePrefixAndMethod(dynamicClientPrefixes, "Watch"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
-	// dynamic:
-	// - Create(                     obj *unstructured.Unstructured, options metav1.CreateOptions, subresources ...string) (*unstructured.Unstructured, error)
-	// + Create(ctx context.Context, obj *unstructured.Unstructured, options metav1.CreateOptions, subresources ...string) (*unstructured.Unstructured, error)
-	{
-		"Create",
-		matchTypePrefixAndMethod(dynamicClientPrefixes, "Create"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
+		// dynamic:
+		// - Create(                     obj *unstructured.Unstructured, options metav1.CreateOptions, subresources ...string) (*unstructured.Unstructured, error)
+		// + Create(ctx context.Context, obj *unstructured.Unstructured, options metav1.CreateOptions, subresources ...string) (*unstructured.Unstructured, error)
+		{
+			"Create",
+			matchTypePrefixAndMethod(dynamicClientPrefixes, "Create"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
-	// dynamic:
-	// - Update(                     obj *unstructured.Unstructured, options metav1.UpdateOptions, subresources ...string) (*unstructured.Unstructured, error)
-	// + Update(ctx context.Context, obj *unstructured.Unstructured, options metav1.UpdateOptions, subresources ...string) (*unstructured.Unstructured, error)
-	{
-		"Update",
-		matchTypePrefixAndMethod(dynamicClientPrefixes, "Update"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
+		// dynamic:
+		// - Update(                     obj *unstructured.Unstructured, options metav1.UpdateOptions, subresources ...string) (*unstructured.Unstructured, error)
+		// + Update(ctx context.Context, obj *unstructured.Unstructured, options metav1.UpdateOptions, subresources ...string) (*unstructured.Unstructured, error)
+		{
+			"Update",
+			matchTypePrefixAndMethod(dynamicClientPrefixes, "Update"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
-	// dynamic:
-	// - UpdateStatus(                     obj *unstructured.Unstructured, options metav1.UpdateOptions) (*unstructured.Unstructured, error)
-	// + UpdateStatus(ctx context.Context, obj *unstructured.Unstructured, options metav1.UpdateOptions) (*unstructured.Unstructured, error)
-	{
-		"UpdateStatus",
-		matchTypePrefixAndMethod(dynamicClientPrefixes, "UpdateStatus"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
+		// dynamic:
+		// - UpdateStatus(                     obj *unstructured.Unstructured, options metav1.UpdateOptions) (*unstructured.Unstructured, error)
+		// + UpdateStatus(ctx context.Context, obj *unstructured.Unstructured, options metav1.UpdateOptions) (*unstructured.Unstructured, error)
+		{
+			"UpdateStatus",
+			matchTypePrefixAndMethod(dynamicClientPrefixes, "UpdateStatus"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
-	// dynamic:
-	// - Patch(                     name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (*unstructured.Unstructured, error)
-	// + Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (*unstructured.Unstructured, error)
-	// metadata:
-	// - Patch(                     name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (*metav1.PartialObjectMetadata, error)
-	// + Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (*metav1.PartialObjectMetadata, error)
-	{
-		"Patch",
-		matchTypePrefixAndMethod(dynamicClientPrefixes, "Patch"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
+		// dynamic:
+		// - Patch(                     name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (*unstructured.Unstructured, error)
+		// + Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (*unstructured.Unstructured, error)
+		// metadata:
+		// - Patch(                     name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (*metav1.PartialObjectMetadata, error)
+		// + Patch(ctx context.Context, name string, pt types.PatchType, data []byte, options metav1.PatchOptions, subresources ...string) (*metav1.PartialObjectMetadata, error)
+		{
+			"Patch",
+			matchTypePrefixAndMethod(dynamicClientPrefixes, "Patch"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+			},
 		},
-	},
-	// dynamic client:
-	// - Delete(                     name string, options metav1.DeleteOptions, subresources ...string) error
-	// + Delete(ctx context.Context, name string, options metav1.DeleteOptions, subresources ...string) error
-	// metadata client:
-	// - Delete(                     name string, options *metav1.DeleteOptions, subresources ...string) error
-	// + Delete(ctx context.Context, name string, options metav1.DeleteOptions, subresources ...string) error
-	{
-		"Delete",
-		matchTypePrefixAndMethod(dynamicClientPrefixes, "Delete"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			dereferenceArgAtIndexIfPointer(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
-			replaceArgAtIndexIfNil(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
+		// dynamic client:
+		// - Delete(                     name string, options metav1.DeleteOptions, subresources ...string) error
+		// + Delete(ctx context.Context, name string, options metav1.DeleteOptions, subresources ...string) error
+		// metadata client:
+		// - Delete(                     name string, options *metav1.DeleteOptions, subresources ...string) error
+		// + Delete(ctx context.Context, name string, options metav1.DeleteOptions, subresources ...string) error
+		{
+			"Delete",
+			matchTypePrefixAndMethod(dynamicClientPrefixes, "Delete"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				dereferenceArgAtIndexIfPointer(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
+				replaceArgAtIndexIfNil(2, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
+			},
 		},
-	},
-	// dynamic client:
-	// - DeleteCollection(                     options metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	// + DeleteCollection(ctx context.Context, options metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	// metadata client:
-	// - DeleteCollection(                     options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	// + DeleteCollection(ctx context.Context, options metav1.DeleteOptions, listOptions metav1.ListOptions) error
-	{
-		"DeleteCollection",
-		matchTypePrefixAndMethod(dynamicClientPrefixes, "DeleteCollection"),
-		transformers{
-			ensureArgAtIndex(0, "context.Context", makeContextArg),
-			dereferenceArgAtIndexIfPointer(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
-			replaceArgAtIndexIfNil(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
+		// dynamic client:
+		// - DeleteCollection(                     options metav1.DeleteOptions, listOptions metav1.ListOptions) error
+		// + DeleteCollection(ctx context.Context, options metav1.DeleteOptions, listOptions metav1.ListOptions) error
+		// metadata client:
+		// - DeleteCollection(                     options *metav1.DeleteOptions, listOptions metav1.ListOptions) error
+		// + DeleteCollection(ctx context.Context, options metav1.DeleteOptions, listOptions metav1.ListOptions) error
+		{
+			"DeleteCollection",
+			matchTypePrefixAndMethod(dynamicClientPrefixes, "DeleteCollection"),
+			transformers{
+				ensureArgAtIndex(0, "context.Context", makeContextArg),
+				dereferenceArgAtIndexIfPointer(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions"),
+				replaceArgAtIndexIfNil(1, "k8s.io/apimachinery/pkg/apis/meta/v1.DeleteOptions", makeMetav1OptionsArg("DeleteOptions")),
+			},
 		},
-	},
+	}
 }
