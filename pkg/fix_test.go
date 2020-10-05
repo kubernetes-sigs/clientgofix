@@ -209,6 +209,7 @@ func runFix(t *testing.T, dir, pkg string) {
 	o.Dir = dir
 	o.Out = b
 	o.Packages = []string{pkg}
+	o.CustomClientset = "example.com/clientset/versioned/typed/, ,"
 	err := o.Run()
 	if err != nil {
 		t.Log(b.String())

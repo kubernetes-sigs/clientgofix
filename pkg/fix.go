@@ -32,12 +32,13 @@ import (
 
 // FixOptions controls the behavior of a fix operation
 type FixOptions struct {
-	WriteOnError bool
-	Overwrite    bool
-	Verbose      bool
-	Packages     []string
-	Dir          string
-	Out          io.Writer
+	WriteOnError    bool
+	Overwrite       bool
+	Verbose         bool
+	Packages        []string
+	Dir             string
+	Out             io.Writer
+	CustomClientset string
 }
 
 // DefaultFixOptions returns a default set of options
@@ -92,6 +93,18 @@ func (o *FixOptions) Run() error {
 		}
 	}
 
+	var customPrefixes []string
+	for _, s := range strings.Split(o.CustomClientset, ",") {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if !strings.HasSuffix(s, "/") {
+			return fmt.Errorf("package path %s should end with /", s)
+		}
+		customPrefixes = append(customPrefixes, s)
+	}
+	transforms := genTransforms(customPrefixes)
 	errorsEncountered := 0
 	processed := map[string]bool{}
 	for _, pkg := range pkgs {

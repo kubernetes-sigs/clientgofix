@@ -31,6 +31,7 @@ func main() {
 	o := pkg.DefaultFixOptions()
 	flag.BoolVar(&o.Overwrite, "overwrite", o.Overwrite, "overwrite files in place (defaults to true; when false, results are written to peer tmp files)")
 	flag.BoolVar(&o.WriteOnError, "write-on-error", o.WriteOnError, "write files even when errors are encountered (defaults to false)")
+	flag.StringVar(&o.CustomClientset, "custom-clientset", o.CustomClientset, "package path of generated client sets that need to be transformed, multiple paths separated by commas, eg: github.com/xx/xxrepo/pkg/clientset/versioned/typed/")
 
 	flag.Parse()
 

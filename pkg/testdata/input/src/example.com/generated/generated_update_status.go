@@ -6,20 +6,28 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes "k8s.io/client-go/kubernetes"
+
+	"example.com/clientset/versioned"
 )
 
-func Update_117(c kubernetes.Interface) {
+func Update_117(c kubernetes.Interface, customClient versioned.Interface) {
 	pod := &corev1.Pod{}
 	c.CoreV1().Pods("").Update(pod)
 	c.CoreV1().Pods("").Update(&corev1.Pod{})
+
+	customClient.SamplecontrollerV1alpha1().Foos("").Update(pod)
+	customClient.SamplecontrollerV1alpha1().Foos("").Update(&corev1.Pod{})
 }
 
-func Update_118(c kubernetes.Interface) {
+func Update_118(c kubernetes.Interface, customClient versioned.Interface) {
 	ctx := context.TODO()
 	pod := &corev1.Pod{}
 	opts := metav1.UpdateOptions{}
 	c.CoreV1().Pods("").Update(ctx, pod, opts)
 	c.CoreV1().Pods("").Update(context.TODO(), &corev1.Pod{}, metav1.UpdateOptions{})
+
+	customClient.SamplecontrollerV1alpha1().Foos("").Update(ctx, pod, opts)
+	customClient.SamplecontrollerV1alpha1().Foos("").Update(context.TODO(), &corev1.Pod{}, metav1.UpdateOptions{})
 }
 
 func Update_Other(c kubernetes.Interface) {
